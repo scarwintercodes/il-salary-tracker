@@ -4,12 +4,25 @@ import pandas as pd
 from datetime import datetime
 import os
 import logging
+import traceback
 
 class JobFilterUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("Job Posting Filter")
-        self.root.geometry("1200x700")
+        self.root.title("Illinois Job Posting Filter")
+        self.root.geometry("1400x800")  # Increased size to accommodate statistics
+        
+        # Create main containers
+        self.main_frame = ttk.Frame(self.root)
+        self.main_frame.pack(fill='both', expand=True)
+        
+        # Create left panel for filters and results
+        self.left_panel = ttk.Frame(self.main_frame)
+        self.left_panel.pack(side='left', fill='both', expand=True, padx=5, pady=5)
+        
+        # Create right panel for statistics
+        self.stats_panel = ttk.Frame(self.main_frame, style='Stats.TFrame')
+        self.stats_panel.pack(side='right', fill='y', padx=5, pady=5)
         
         # Data storage
         self.df = None
@@ -18,13 +31,12 @@ class JobFilterUI:
         # Set up logging
         self.logger = logging.getLogger(__name__)
         
-        # Create main containers
+        # Initialize UI components
+        self.setup_styles()
         self.create_filter_frame()
         self.create_results_frame()
+        self.create_stats_panel()
         self.create_status_bar()
-        
-        # Initialize the UI
-        self.setup_styles()
         self.load_data()
 
     def setup_styles(self):
@@ -33,10 +45,12 @@ class JobFilterUI:
         style.configure('Filter.TFrame', padding=10)
         style.configure('Results.TFrame', padding=10)
         style.configure('Status.TFrame', padding=5)
+        style.configure('Stats.TFrame', padding=10)
+        style.configure('StatsHeader.TLabel', font=('Helvetica', 12, 'bold'))
 
     def create_filter_frame(self):
         """Create the filter controls section"""
-        filter_frame = ttk.Frame(self.root, style='Filter.TFrame')
+        filter_frame = ttk.Frame(self.left_panel, style='Filter.TFrame')
         filter_frame.pack(fill='x', padx=10, pady=5)
         
         # Date range filter
@@ -74,11 +88,11 @@ class JobFilterUI:
 
     def create_results_frame(self):
         """Create the results display section"""
-        results_frame = ttk.Frame(self.root, style='Results.TFrame')
+        results_frame = ttk.Frame(self.left_panel, style='Results.TFrame')
         results_frame.pack(fill='both', expand=True, padx=10, pady=5)
         
         # Create Treeview
-        columns = ('Post Date', 'Company', 'Title', 'City', 'URL')
+        columns = ('Post Date', 'Company', 'Title', 'Location', 'URL')
         self.tree = ttk.Treeview(results_frame, columns=columns, show='headings')
         
         # Configure columns
@@ -102,6 +116,27 @@ class JobFilterUI:
         # Configure grid weights
         results_frame.columnconfigure(0, weight=1)
         results_frame.rowconfigure(0, weight=1)
+
+    def create_stats_panel(self):
+        """Create the statistics panel"""
+        ttk.Label(self.stats_panel, text="Statistics", style='StatsHeader.TLabel').pack(pady=10)
+        
+        # Create frame for stats content
+        stats_content = ttk.Frame(self.stats_panel)
+        stats_content.pack(fill='x', padx=10)
+        
+        # Create labels for each statistic
+        self.total_jobs_var = tk.StringVar(value="Total Jobs: 0")
+        self.unique_companies_var = tk.StringVar(value="Unique Companies: 0")
+        self.top_locations_var = tk.StringVar(value="Top Locations:\n")
+        
+        ttk.Label(stats_content, textvariable=self.total_jobs_var).pack(anchor='w', pady=5)
+        ttk.Label(stats_content, textvariable=self.unique_companies_var).pack(anchor='w', pady=5)
+        ttk.Label(stats_content, textvariable=self.top_locations_var).pack(anchor='w', pady=5)
+        
+        # Add location distribution chart (placeholder)
+        self.location_chart_frame = ttk.Frame(self.stats_panel)
+        self.location_chart_frame.pack(fill='x', padx=10, pady=10)
 
     def create_status_bar(self):
         """Create the status bar"""
@@ -133,24 +168,22 @@ class JobFilterUI:
             # Read the CSV file
             df = pd.read_csv(latest_file)
             print(f"\nDataFrame columns: {df.columns.tolist()}")  # Debug print
-            print(f"\nFirst few rows of data:")  # Debug print
-            print(df.head())  # Debug print
             print(f"\nTotal records: {len(df)}")  # Debug print
             
             # Convert post_date to datetime with error handling
             df['post_date'] = pd.to_datetime(df['post_date'], errors='coerce')
-            print(f"\nDate conversion completed. Sample dates:")  # Debug print
-            print(df['post_date'].head())  # Debug print
             
             self.df = df
             self.filtered_df = df.copy()
             
             self.update_results_display()
+            self.update_statistics()  # Update statistics panel
             self.status_var.set(f"Loaded {len(df)} records from {latest_file}")
             
         except Exception as e:
             print(f"\nERROR loading data: {str(e)}")  # Debug print
             self.logger.error(f"Error loading data: {str(e)}")
+            traceback.print_exc()  # Print full traceback
             messagebox.showerror("Error", f"Error loading data: {str(e)}")
             self.status_var.set("Error loading data")
 
@@ -180,9 +213,10 @@ class JobFilterUI:
         # City filter
         if self.city_var.get() != "All":
             city_filter = self.city_var.get().lower()
-            self.filtered_df = self.filtered_df[self.filtered_df['title'].str.lower().str.contains(city_filter, na=False)]
+            self.filtered_df = self.filtered_df[self.filtered_df['location'].str.lower().str.contains(city_filter, na=False)]
         
         self.update_results_display()
+        self.update_statistics()  # Update statistics after filtering
         self.status_var.set("Filters applied")
 
     def update_results_display(self):
@@ -237,6 +271,28 @@ class JobFilterUI:
             self.logger.error(f"Error updating display: {str(e)}")
             raise
 
+    def update_statistics(self):
+        """Update statistics panel with current data"""
+        if self.filtered_df is not None:
+            # Update total jobs
+            total_jobs = len(self.filtered_df)
+            self.total_jobs_var.set(f"Total Jobs: {total_jobs}")
+            
+            # Update unique companies
+            unique_companies = self.filtered_df['company'].nunique()
+            self.unique_companies_var.set(f"Unique Companies: {unique_companies}")
+            
+            # Update top locations
+            top_locations = self.filtered_df['location'].value_counts().head(5)
+            locations_text = "Top Locations:\n"
+            for loc, count in top_locations.items():
+                locations_text += f"{loc}: {count}\n"
+            self.top_locations_var.set(locations_text)
+        else:
+            self.total_jobs_var.set("Total Jobs: 0")
+            self.unique_companies_var.set("Unique Companies: 0")
+            self.top_locations_var.set("Top Locations:\nNo data available")
+
     def sort_treeview(self, col):
         """Sort treeview by column"""
         if self.filtered_df is None:
@@ -259,11 +315,6 @@ class JobFilterUI:
             )
             if filename:
                 self.filtered_df.to_csv(filename, index=False)
-                self.status_var.set(f"Results exported to {filename}")
-        except Exception as e:
-            messagebox.showerror("Export Error", f"Error exporting results: {str(e)}")
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = JobFilterUI(root)
-    root.mainloop()
+                self.status
+        except IndexError:
+            return

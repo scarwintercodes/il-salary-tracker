@@ -16,8 +16,125 @@ logging.basicConfig(
 class DataValidator:
     """Handles data validation and repair for job posting data"""
     
+    ILLINOIS_LOCATIONS = {
+        'cities': [
+            'chicago', 'aurora', 'rockford', 'joliet', 'naperville', 
+            'springfield', 'peoria', 'elgin', 'waukegan', 'champaign',
+            'bloomington', 'decatur', 'evanston', 'schaumburg', 'bolingbrook',
+            'palatine', 'skokie', 'des plaines', 'orland park', 'tinley park',
+            'oak lawn', 'berwyn', 'mount prospect', 'normal', 'wheaton',
+            'hoffman estates', 'downers grove', 'gurnee', 'oak park', 'lombard',
+            'buffalo grove', 'crystal lake', 'quincy', 'romeoville', 'moline',
+            'urbana', 'belleville', 'rockton', 'rock island', 'dekalb'
+        ],
+        'regions': [
+            'chicago metropolitan area', 'greater chicago', 'chicagoland',
+            'northern illinois', 'central illinois', 'southern illinois',
+            'quad cities', 'metro east', 'fox valley'
+        ],
+        'identifiers': [
+            'il', 'ill', 'illinois', 'chicago area', 'chicago, il',
+            'chicago region', 'illinois region'
+        ]
+    }
+
+    def validate_illinois_location(self, location_text: str) -> bool:
+        """
+        Validate if a location is in Illinois
+        
+        Args:
+            location_text: Location string to validate
+            
+        Returns:
+            bool: True if location is in Illinois, False otherwise
+        """
+        if not location_text or not isinstance(location_text, str):
+            return False
+            
+        # Convert to lowercase for comparison
+        location_text = location_text.lower().strip()
+        
+        # Direct match with cities
+        for city in self.ILLINOIS_LOCATIONS['cities']:
+            if city in location_text:
+                return True
+        
+        # Check for regions
+        for region in self.ILLINOIS_LOCATIONS['regions']:
+            if region in location_text:
+                return True
+                
+        # Check for state identifiers
+        for identifier in self.ILLINOIS_LOCATIONS['identifiers']:
+            if identifier in location_text:
+                return True
+        
+        # Check for hyphenated city names
+        for city in self.ILLINOIS_LOCATIONS['cities']:
+            if city.replace(' ', '-') in location_text:
+                return True
+        
+        # Check for common formats like "City, IL" or "City (IL)"
+        for city in self.ILLINOIS_LOCATIONS['cities']:
+            patterns = [
+                f"{city}, il",
+                f"{city}, ill",
+                f"{city}, illinois",
+                f"{city} il",
+                f"{city} (il)",
+                f"{city} illinois"
+            ]
+            if any(pattern in location_text for pattern in patterns):
+                return True
+        
+        return False
+
+    def get_city_from_location(self, location_text: str) -> str:
+        """
+        Extract city name from location string if it's in Illinois
+        
+        Args:
+            location_text: Location string to parse
+            
+        Returns:
+            str: City name if found, otherwise 'Unknown'
+        """
+        if not location_text or not isinstance(location_text, str):
+            return 'Unknown'
+            
+        location_text = location_text.lower().strip()
+        
+        # Check for exact city matches
+        for city in self.ILLINOIS_LOCATIONS['cities']:
+            if city in location_text:
+                return city.title()
+        
+        # Check for hyphenated cities
+        for city in self.ILLINOIS_LOCATIONS['cities']:
+            if city.replace(' ', '-') in location_text:
+                return city.title()
+        
+        # Check for cities with state abbreviations
+        for city in self.ILLINOIS_LOCATIONS['cities']:
+            patterns = [
+                f"{city}, il",
+                f"{city}, ill",
+                f"{city} il",
+                f"{city} (il)"
+            ]
+            if any(pattern in location_text for pattern in patterns):
+                return city.title()
+        
+        # If no specific city found but location is in Illinois
+        if any(region in location_text for region in self.ILLINOIS_LOCATIONS['regions']):
+            if 'chicago' in location_text:
+                return 'Chicago Area'
+            return 'Illinois Region'
+            
+        return 'Unknown'
+    
     REQUIRED_COLUMNS = [
-        'date_found', 'post_date', 'city', 'platform', 'company', 'title', 'url'
+        'date_found', 'post_date', 'platform', 'company', 'title', 'url', 'location'
     ]
     
     DATE_FORMATS = [
