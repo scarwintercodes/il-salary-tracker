@@ -119,22 +119,28 @@ class JobFilterUI:
     def load_data(self):
         """Load the most recent CSV file"""
         try:
-            # Find the most recent CSV file
+            # Find all CSV files
             files = [f for f in os.listdir() if f.endswith('.csv')]
+            print(f"Found CSV files: {files}")  # Debug print
+            
             if not files:
-                messagebox.showwarning("No Data", "No job posting data files found.")
+                messagebox.showwarning("No Data", "No CSV files found.")
                 return
             
             latest_file = max(files)
-            self.logger.info(f"Loading data from {latest_file}")
-            print(f"Loading data from {latest_file}")  # Debug print
+            print(f"\nAttempting to load: {latest_file}")  # Debug print
             
             # Read the CSV file
             df = pd.read_csv(latest_file)
-            print(f"Loaded {len(df)} records")  # Debug print
+            print(f"\nDataFrame columns: {df.columns.tolist()}")  # Debug print
+            print(f"\nFirst few rows of data:")  # Debug print
+            print(df.head())  # Debug print
+            print(f"\nTotal records: {len(df)}")  # Debug print
             
             # Convert post_date to datetime with error handling
             df['post_date'] = pd.to_datetime(df['post_date'], errors='coerce')
+            print(f"\nDate conversion completed. Sample dates:")  # Debug print
+            print(df['post_date'].head())  # Debug print
             
             self.df = df
             self.filtered_df = df.copy()
@@ -143,6 +149,7 @@ class JobFilterUI:
             self.status_var.set(f"Loaded {len(df)} records from {latest_file}")
             
         except Exception as e:
+            print(f"\nERROR loading data: {str(e)}")  # Debug print
             self.logger.error(f"Error loading data: {str(e)}")
             messagebox.showerror("Error", f"Error loading data: {str(e)}")
             self.status_var.set("Error loading data")
@@ -180,25 +187,55 @@ class JobFilterUI:
 
     def update_results_display(self):
         """Update the Treeview with filtered results"""
-        # Clear existing items
-        for item in self.tree.get_children():
-            self.tree.delete(item)
-        
-        if self.filtered_df is None or len(self.filtered_df) == 0:
-            self.count_var.set("No results to display")
-            return
-        
-        # Add filtered data
-        for _, row in self.filtered_df.iterrows():
-            self.tree.insert('', 'end', values=(
-                row['post_date'].strftime('%Y-%m-%d') if pd.notnull(row['post_date']) else 'Unknown',
-                row['company'],
-                row['title'],
-                row.get('location', 'Unknown'),  # Use get() to handle missing location
-                row['url']
-            ))
-        
-        self.count_var.set(f"Showing {len(self.filtered_df)} results")
+        try:
+            print("\nUpdating results display...")  # Debug print
+            
+            # Clear existing items
+            for item in self.tree.get_children():
+                self.tree.delete(item)
+            
+            if self.filtered_df is None:
+                print("filtered_df is None")  # Debug print
+                self.count_var.set("No results to display")
+                return
+                
+            print(f"\nFiltered DataFrame has {len(self.filtered_df)} rows")  # Debug print
+            print("\nFiltered DataFrame columns:", self.filtered_df.columns.tolist())  # Debug print
+            
+            # Add filtered data
+            for idx, row in self.filtered_df.iterrows():
+                try:
+                    print(f"\nProcessing row {idx}:")  # Debug print
+                    print(row)  # Debug print
+                    
+                    # Format the date
+                    if pd.notnull(row['post_date']):
+                        formatted_date = row['post_date'].strftime('%Y-%m-%d')
+                    else:
+                        formatted_date = 'Unknown'
+                        
+                    values = (
+                        formatted_date,
+                        row.get('company', 'Unknown'),
+                        row.get('title', 'Unknown'),
+                        row.get('location', 'Unknown'),
+                        row.get('url', 'Unknown')
+                    )
+                    
+                    print(f"Inserting values: {values}")  # Debug print
+                    self.tree.insert('', 'end', values=values)
+                    
+                except Exception as row_error:
+                    print(f"Error processing row {idx}: {str(row_error)}")  # Debug print
+                    continue
+            
+            self.count_var.set(f"Showing {len(self.filtered_df)} results")
+            print("\nDisplay update completed")  # Debug print
+            
+        except Exception as e:
+            print(f"\nERROR updating display: {str(e)}")  # Debug print
+            self.logger.error(f"Error updating display: {str(e)}")
+            raise
 
     def sort_treeview(self, col):
         """Sort treeview by column"""

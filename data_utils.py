@@ -17,7 +17,7 @@ class DataValidator:
     """Handles data validation and repair for job posting data"""
     
     REQUIRED_COLUMNS = [
-        'date_found', 'post_date', 'platform', 'company', 'title', 'url'
+        'date_found', 'post_date', 'city', 'platform', 'company', 'title', 'url'
     ]
     
     DATE_FORMATS = [
