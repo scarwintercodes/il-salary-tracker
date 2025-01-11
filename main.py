@@ -9,6 +9,7 @@ from urllib.parse import quote
 from job_filter_ui import JobFilterUI
 import sys
 import traceback
+import os
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -36,6 +37,31 @@ class JobScraperApp:
         self.jobs = []
         self.root = None
         self.ui = None
+
+    def cleanup_old_files(self):
+        """Remove old CSV files from the directory"""
+        try:
+            logger.info("Starting cleanup of old CSV files")
+            deleted_count = 0
+            
+            # Find all CSV files
+            csv_files = [f for f in os.listdir() if f.endswith('.csv')]
+            
+            for file in csv_files:
+                try:
+                    # Remove the file
+                    os.remove(file)
+                    deleted_count += 1
+                    logger.info(f"Deleted old file: {file}")
+                except Exception as e:
+                    logger.error(f"Error deleting file {file}: {str(e)}")
+                    continue
+            
+            logger.info(f"Cleanup completed. Removed {deleted_count} old CSV files")
+            
+        except Exception as e:
+            logger.error(f"Error during cleanup: {str(e)}")
+            logger.error(traceback.format_exc())
 
     def get_search_url(self, page: int) -> str:
         """Generate search URL for given page"""
@@ -141,20 +167,8 @@ class JobScraperApp:
         """Save scraped jobs to CSV file"""
         filename = f'linkedin_jobs_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
         df.to_csv(filename, index=False)
+        logger.info(f"Saved new job data to {filename}")
         return filename
-
-    def run_scraper(self):
-        """Run the LinkedIn scraper"""
-        try:
-            logger.info("Starting LinkedIn scraper")
-            df = self.scrape_jobs(max_pages=5)
-            filename = self.save_jobs_to_csv(df)
-            logger.info(f"Saved {len(df)} jobs to {filename}")
-            return filename
-        except Exception as e:
-            logger.error(f"Scraping error: {str(e)}")
-            logger.error(traceback.format_exc())
-            raise
 
     def start_ui(self):
         """Initialize and start the UI"""
@@ -172,17 +186,19 @@ class JobScraperApp:
     def run(self):
         """Main application run method"""
         try:
-            # First scrape the jobs
-            self.run_scraper()
+            # Clean up old files first
+            self.cleanup_old_files()
             
-            # Then start the UI
+            # Scrape jobs and save to CSV
+            df = self.scrape_jobs(max_pages=5)
+            self.save_jobs_to_csv(df)
+            
+            # Start the UI
             self.start_ui()
             
         except Exception as e:
             logger.error(f"Application error: {str(e)}")
             logger.error(traceback.format_exc())
-            
-            # Show error in GUI if possible
             if self.root is not None:
                 tk.messagebox.showerror("Error", f"An error occurred: {str(e)}")
             raise
@@ -192,7 +208,7 @@ def main():
     try:
         logger.info("Starting application")
         app = JobScraperApp()
-        app.run()
+        app.run()  # Now using the correct method name
     except Exception as e:
         logger.error(f"Fatal error: {str(e)}")
         logger.error(traceback.format_exc())
