@@ -129,6 +129,99 @@ class JobFilterUI:
         self.total_jobs_var = tk.StringVar(value="Total Jobs: 0")
         self.unique_companies_var = tk.StringVar(value="Unique Companies: 0")
         self.top_locations_var = tk.StringVar(value="Top Locations:\n")
+        self.company_size_stats_var = tk.StringVar(value="Company Sizes:\n")
+        
+        ttk.Label(stats_content, textvariable=self.total_jobs_var).pack(anchor='w', pady=5)
+        ttk.Label(stats_content, textvariable=self.unique_companies_var).pack(anchor='w', pady=5)
+        ttk.Label(stats_content, textvariable=self.top_locations_var).pack(anchor='w', pady=5)
+        ttk.Label(stats_content, textvariable=self.company_size_stats_var).pack(anchor='w', pady=5)
+        
+        # Add company size distribution chart
+        self.create_size_chart_frame()
+
+    def create_size_chart_frame(self):
+        """Create frame for company size distribution chart"""
+        self.size_chart_frame = ttk.Frame(self.stats_panel)
+        self.size_chart_frame.pack(fill='x', padx=10, pady=10)
+        
+        # Add size distribution bars
+        self.size_canvas = tk.Canvas(self.size_chart_frame, height=100)
+        self.size_canvas.pack(fill='x', expand=True)
+
+    def update_size_chart(self):
+        """Update the company size distribution chart"""
+        if self.filtered_df is None or self.filtered_df.empty:
+            return
+            
+        self.size_canvas.delete('all')
+        
+        # Get company size distribution
+        size_counts = self.filtered_df['company_size'].value_counts()
+        
+        # Draw bars
+        width = self.size_canvas.winfo_width()
+        height = self.size_canvas.winfo_height()
+        bar_width = width / (len(size_counts) + 1)
+        
+        max_count = size_counts.max()
+        for i, (size, count) in enumerate(size_counts.items()):
+            bar_height = (count / max_count) * height
+            x1 = i * bar_width + 5
+            y1 = height - bar_height
+            x2 = (i + 1) * bar_width - 5
+            y2 = height
+            
+            # Draw bar
+            self.size_canvas.create_rectangle(x1, y1, x2, y2, fill='blue')
+            
+            # Add label
+            self.size_canvas.create_text(
+                (x1 + x2) / 2, height - 5,
+                text=f"{size}\n({count})",
+                anchor='s'
+            )
+
+    def update_statistics(self):
+        """Update statistics panel with current data"""
+        if self.filtered_df is not None:
+            # Update existing stats
+            total_jobs = len(self.filtered_df)
+            self.total_jobs_var.set(f"Total Jobs: {total_jobs}")
+            
+            unique_companies = self.filtered_df['company'].nunique()
+            self.unique_companies_var.set(f"Unique Companies: {unique_companies}")
+            
+            # Update location stats
+            top_locations = self.filtered_df['location'].value_counts().head(5)
+            locations_text = "Top Locations:\n"
+            for loc, count in top_locations.items():
+                locations_text += f"{loc}: {count}\n"
+            self.top_locations_var.set(locations_text)
+            
+            # Update company size stats
+            size_stats = self.filtered_df['company_size'].value_counts()
+            size_text = "Company Sizes:\n"
+            for size, count in size_stats.items():
+                size_text += f"{size}: {count}\n"
+            self.company_size_stats_var.set(size_text)
+            
+            # Update size distribution chart
+            self.update_size_chart()
+        else:
+            self.total_jobs_var.set("Total Jobs: 0")
+            self.unique_companies_var.set("Unique Companies: 0")
+            self.top_locations_var.set("Top Locations:\nNo data available")
+            self.company_size_stats_var.set("Company Sizes:\nNo data available")
+        ttk.Label(self.stats_panel, text="Statistics", style='StatsHeader.TLabel').pack(pady=10)
+        
+        # Create frame for stats content
+        stats_content = ttk.Frame(self.stats_panel)
+        stats_content.pack(fill='x', padx=10)
+        
+        # Create labels for each statistic
+        self.total_jobs_var = tk.StringVar(value="Total Jobs: 0")
+        self.unique_companies_var = tk.StringVar(value="Unique Companies: 0")
+        self.top_locations_var = tk.StringVar(value="Top Locations:\n")
         
         ttk.Label(stats_content, textvariable=self.total_jobs_var).pack(anchor='w', pady=5)
         ttk.Label(stats_content, textvariable=self.unique_companies_var).pack(anchor='w', pady=5)
@@ -316,5 +409,6 @@ class JobFilterUI:
             if filename:
                 self.filtered_df.to_csv(filename, index=False)
                 self.status
-        except IndexError:
-            return
+        except:
+            print("An exception occurred")
+            

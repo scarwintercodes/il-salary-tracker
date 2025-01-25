@@ -1,3 +1,4 @@
+
 import logging
 from datetime import datetime
 import tkinter as tk
@@ -142,7 +143,7 @@ class JobScraperApp:
             logger.error(f"Error scraping page {page}: {str(e)}")
             return False
 
-    def scrape_jobs(self, max_pages: int = 5) -> pd.DataFrame:
+    def scrape_jobs(self, max_pages: int = 15) -> pd.DataFrame: #toggle max pages
         """Scrape multiple pages of job listings"""
         logger.info("Starting LinkedIn job scrape")
         page = 1
@@ -190,7 +191,7 @@ class JobScraperApp:
             self.cleanup_old_files()
             
             # Scrape jobs and save to CSV
-            df = self.scrape_jobs(max_pages=5)
+            df = self.scrape_jobs(max_pages=15) #toggle max pages to match number in scrape_job functions
             self.save_jobs_to_csv(df)
             
             # Start the UI
