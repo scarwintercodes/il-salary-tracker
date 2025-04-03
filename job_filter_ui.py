@@ -231,7 +231,7 @@ class JobFilterUI:
         self.location_chart_frame = ttk.Frame(self.stats_panel)
         self.location_chart_frame.pack(fill='x', padx=10, pady=10)
 
-    def create_status_bar(self):
+    def create_status_bar(self): # any way for this to appear while the script is running?
         """Create the status bar"""
         status_frame = ttk.Frame(self.root, style='Status.TFrame')
         status_frame.pack(fill='x', side='bottom')
@@ -249,34 +249,34 @@ class JobFilterUI:
         try:
             # Find all CSV files
             files = [f for f in os.listdir() if f.endswith('.csv')]
-            print(f"Found CSV files: {files}")  # Debug print
+            print(f"Found CSV files: {files}")  # debug print
             
             if not files:
                 messagebox.showwarning("No Data", "No CSV files found.")
                 return
             
             latest_file = max(files)
-            print(f"\nAttempting to load: {latest_file}")  # Debug print
+            print(f"\nAttempting to load: {latest_file}")  # debug print
             
-            # Read the CSV file
+            # read the CSV file
             df = pd.read_csv(latest_file)
-            print(f"\nDataFrame columns: {df.columns.tolist()}")  # Debug print
-            print(f"\nTotal records: {len(df)}")  # Debug print
+            print(f"\nDataFrame columns: {df.columns.tolist()}")  # debug print
+            print(f"\nTotal records: {len(df)}")  # debug print
             
-            # Convert post_date to datetime with error handling
+            # convert post_date to datetime with error handling
             df['post_date'] = pd.to_datetime(df['post_date'], errors='coerce')
             
             self.df = df
             self.filtered_df = df.copy()
             
             self.update_results_display()
-            self.update_statistics()  # Update statistics panel
+            self.update_statistics()  # update statistics panel
             self.status_var.set(f"Loaded {len(df)} records from {latest_file}")
             
         except Exception as e:
-            print(f"\nERROR loading data: {str(e)}")  # Debug print
+            print(f"\nERROR loading data: {str(e)}")  # debug print
             self.logger.error(f"Error loading data: {str(e)}")
-            traceback.print_exc()  # Print full traceback
+            traceback.print_exc()  # print full traceback
             messagebox.showerror("Error", f"Error loading data: {str(e)}")
             self.status_var.set("Error loading data")
 
@@ -294,48 +294,48 @@ class JobFilterUI:
         
         self.filtered_df = self.df.copy()
         
-        # Date filter
+        # date filter
         date_mask = (self.filtered_df['post_date'] >= start_date) & (self.filtered_df['post_date'] <= end_date)
         self.filtered_df = self.filtered_df[date_mask]
         
-        # Company filter
+        # company filter
         if self.company_var.get():
             company_filter = self.company_var.get().lower()
             self.filtered_df = self.filtered_df[self.filtered_df['company'].str.lower().str.contains(company_filter, na=False)]
         
-        # City filter
+        # city filter
         if self.city_var.get() != "All":
             city_filter = self.city_var.get().lower()
             self.filtered_df = self.filtered_df[self.filtered_df['location'].str.lower().str.contains(city_filter, na=False)]
         
         self.update_results_display()
-        self.update_statistics()  # Update statistics after filtering
+        self.update_statistics()  # update statistics after filtering
         self.status_var.set("Filters applied")
 
     def update_results_display(self):
         """Update the Treeview with filtered results"""
         try:
-            print("\nUpdating results display...")  # Debug print
+            print("\nUpdating results display...")  # debug print
             
-            # Clear existing items
+            # clear existing items
             for item in self.tree.get_children():
                 self.tree.delete(item)
             
             if self.filtered_df is None:
-                print("filtered_df is None")  # Debug print
+                print("filtered_df is None")  # debug print
                 self.count_var.set("No results to display")
                 return
                 
             print(f"\nFiltered DataFrame has {len(self.filtered_df)} rows")  # Debug print
             print("\nFiltered DataFrame columns:", self.filtered_df.columns.tolist())  # Debug print
             
-            # Add filtered data
+            # add filtered data
             for idx, row in self.filtered_df.iterrows():
                 try:
-                    print(f"\nProcessing row {idx}:")  # Debug print
-                    print(row)  # Debug print
+                    print(f"\nProcessing row {idx}:")  # debug print
+                    print(row)  # debug print
                     
-                    # Format the date
+                    # format the date
                     if pd.notnull(row['post_date']):
                         formatted_date = row['post_date'].strftime('%Y-%m-%d')
                     else:

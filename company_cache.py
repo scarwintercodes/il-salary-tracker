@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import logging
 
 class CompanyCache:
-    def __init__(self, cache_file='company_cache.json', cache_duration_days=7):
+    def __init__(self, cache_file='company_cache.json', cache_duration_days=14):
         self.cache_file = cache_file
         self.cache_duration = timedelta(days=cache_duration_days)
         self.cache = self._load_cache()

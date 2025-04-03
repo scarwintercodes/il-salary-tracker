@@ -6,7 +6,7 @@ import os
 from typing import Tuple, Optional
 import dateparser
 
-# Set up logging
+# set up logging
 logging.basicConfig(
     filename='job_scraper.log',
     level=logging.INFO,
@@ -51,30 +51,31 @@ class DataValidator:
         if not location_text or not isinstance(location_text, str):
             return False
             
-        # Convert to lowercase for comparison
+        # convert to lowercase for comparison
         location_text = location_text.lower().strip()
         
-        # Direct match with cities
+        # direct match with cities
         for city in self.ILLINOIS_LOCATIONS['cities']:
             if city in location_text:
                 return True
         
-        # Check for regions
+        # check for regions
         for region in self.ILLINOIS_LOCATIONS['regions']:
             if region in location_text:
                 return True
                 
-        # Check for state identifiers
+        # check for state identifiers
         for identifier in self.ILLINOIS_LOCATIONS['identifiers']:
             if identifier in location_text:
                 return True
         
-        # Check for hyphenated city names
+        # check for hyphenated city names
         for city in self.ILLINOIS_LOCATIONS['cities']:
             if city.replace(' ', '-') in location_text:
                 return True
         
-        # Check for common formats like "City, IL" or "City (IL)"
+        # may be unnecessary, LI posts are standardized re: city
+        # check for common formats like "City, IL" or "City (IL)"
         for city in self.ILLINOIS_LOCATIONS['cities']:
             patterns = [
                 f"{city}, il",
@@ -104,17 +105,17 @@ class DataValidator:
             
         location_text = location_text.lower().strip()
         
-        # Check for exact city matches
+        # check for exact city matches
         for city in self.ILLINOIS_LOCATIONS['cities']:
             if city in location_text:
                 return city.title()
         
-        # Check for hyphenated cities
+        # check for hyphenated cities
         for city in self.ILLINOIS_LOCATIONS['cities']:
             if city.replace(' ', '-') in location_text:
                 return city.title()
         
-        # Check for cities with state abbreviations
+        # check for cities with state abbreviations
         for city in self.ILLINOIS_LOCATIONS['cities']:
             patterns = [
                 f"{city}, il",
@@ -125,7 +126,7 @@ class DataValidator:
             if any(pattern in location_text for pattern in patterns):
                 return city.title()
         
-        # If no specific city found but location is in Illinois
+        # if no specific city found but location is in Illinois
         if any(region in location_text for region in self.ILLINOIS_LOCATIONS['regions']):
             if 'chicago' in location_text:
                 return 'Chicago Area'
@@ -177,14 +178,14 @@ class DataValidator:
         if pd.isna(date_str):
             return None
             
-        # Try standard formats first
+        #try standard formats first
         for date_format in self.DATE_FORMATS:
             try:
                 return datetime.strptime(str(date_str), date_format)
             except ValueError:
                 continue
         
-        # Try dateparser for more complex formats
+        #try dateparser for more complex formats
         try:
             parsed_date = dateparser.parse(str(date_str))
             if parsed_date:
@@ -200,10 +201,10 @@ class DataValidator:
             if date_column in df.columns:
                 self.logger.info(f"Repairing {date_column} column")
                 
-                # Convert to datetime with pandas first
+                #convert to datetime with pandas first
                 df[date_column] = pd.to_datetime(df[date_column], errors='coerce')
                 
-                # Try parsing unparsed dates with multiple formats
+                #try parsing unparsed dates with multiple formats
                 mask = df[date_column].isna()
                 if mask.any():
                     original_values = df.loc[mask, date_column].index
@@ -222,31 +223,32 @@ class DataValidator:
         """Validate and clean URLs"""
         if 'url' in df.columns:
             self.logger.info("Validating URLs")
-            # Remove any whitespace
+            #remove any whitespace
             df['url'] = df['url'].str.strip()
             
-            # Ensure URLs start with http:// or https://
+            #ensure URLs start with http:// or https://
             mask = ~df['url'].str.contains('^https?://', na=False, regex=True)
             df.loc[mask, 'url'] = 'https://' + df.loc[mask, 'url']
             
-            # Log invalid URLs
+            #log invalid URLs
             invalid_urls = df[~df['url'].str.match(r'^https?://[^\s/$.?#].[^\s]*$', na=False)]
             if not invalid_urls.empty:
                 self.logger.warning(f"Found {len(invalid_urls)} invalid URLs")
         
         return df
 
+    # may be unnecessary. LI job titles are standardized re: spacing etc
     def clean_text_fields(self, df: pd.DataFrame) -> pd.DataFrame:
         """Clean text fields (company, title)"""
         text_columns = ['company', 'title']
         for column in text_columns:
             if column in df.columns:
                 self.logger.info(f"Cleaning {column} column")
-                # Remove extra whitespace
+                #remove extra whitespace
                 df[column] = df[column].str.strip()
-                # Replace multiple spaces with single space
+                #replace multiple spaces with single space
                 df[column] = df[column].str.replace(r'\s+', ' ', regex=True)
-                # Remove special characters
+                #remove special characters
                 df[column] = df[column].str.replace(r'[^\w\s-]', '', regex=True)
         
         return df
@@ -261,18 +263,18 @@ class DataValidator:
         try:
             self.logger.info("Starting data validation and repair")
             
-            # Check structure
+            #check structure
             is_valid, missing_columns = self.validate_csv_structure(df)
             if not is_valid:
                 df = self.repair_missing_columns(df)
             
-            # Repair dates
+            #repair dates
             df = self.repair_dates(df)
             
-            # Validate URLs
+            #validate URLs
             df = self.validate_urls(df)
             
-            # Clean text fields
+            #clean text fields
             df = self.clean_text_fields(df)
             
             self.logger.info("Data validation and repair completed successfully")
