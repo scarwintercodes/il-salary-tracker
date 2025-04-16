@@ -1,2 +1,2 @@
 # il-salary-tracker
- Utilize TheirStack API to find IL job postings in non-compliance with EPA
+Tkinter-based GUI to scrape LinkedIn and other sources to pull job openings in Illinois based on salary
